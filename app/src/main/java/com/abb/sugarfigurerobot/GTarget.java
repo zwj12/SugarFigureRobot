@@ -1,12 +1,10 @@
 package com.abb.sugarfigurerobot;
-
+import java.util.Objects;
 /**
  * @author CNMIZHU7
  * @date 2/12/2020
  * description：
  */
-
-import java.util.Objects;
 
 public class GTarget extends Point implements Cloneable {
     protected double e;

@@ -27,11 +27,12 @@ public class SugarFigureView extends View {
     private float density;
     private Canvas canvas;
     private Paint paint;
+    private Paint paintCompressed;
     private Bitmap bitmap;
 
     private int figureWidth = 640;
     private int figureHeight = 960;
-    private int strokeWidth=5;
+    private int strokeWidth = 5;
     private float start_x;
     private float start_y;
     private float end_x;
@@ -56,6 +57,8 @@ public class SugarFigureView extends View {
         paint.setDither(true);//设置图像抖动处理
         paint.setStrokeJoin(Paint.Join.ROUND);//设置图像的结合方式
         paint.setStrokeCap(Paint.Cap.ROUND);//设置画笔为圆形样式
+        this.paintCompressed = new Paint(this.paint);
+        this.paintCompressed.setColor(Color.GREEN);
     }
 
     public SugarFigureView(Context context, @Nullable AttributeSet attrs) {
@@ -68,8 +71,37 @@ public class SugarFigureView extends View {
         initView(context);
     }
 
-    public void SetStrokeWidth(int strokeWidth){
-        this.strokeWidth=strokeWidth;
+    public int getStrokeWidth() {
+        return strokeWidth;
+    }
+
+    public void setStrokeWidth(int strokeWidth) {
+        this.strokeWidth = strokeWidth;
+        this.paint.setStrokeWidth(strokeWidth * density);
+        this.paintCompressed.setStrokeWidth(strokeWidth * density);
+    }
+
+    public void clearPath() {
+        this.bitmap.eraseColor(Color.BLACK);
+        this.listSugarFigurePath.clear();
+    }
+
+    public void drawCompressedPath() {
+        int pointCount = 0;
+        int pointCompressedCount = 0;
+        for (SugarFigurePath sugarFigurePath : this.listSugarFigurePath) {
+            sugarFigurePath.CompressLayerPath();
+            ArrayList<? extends Point> listGPath = sugarFigurePath.getListGPathCompressed();
+            canvas.drawPoint((float) listGPath.get(0).x, (float) listGPath.get(0).y, paintCompressed);
+            for (int i = 1; i < listGPath.size(); i++) {
+                canvas.drawLine((float) listGPath.get(i - 1).x, (float) listGPath.get(i - 1).y,
+                        (float) listGPath.get(i).x, (float) listGPath.get(i).y, paintCompressed);
+            }
+            pointCount += sugarFigurePath.getListGPath().size();
+            pointCompressedCount += sugarFigurePath.getListGPathCompressed().size();
+        }
+        invalidate();
+        Log.d(TAG, "pointCount=" + pointCount + ", pointCompressedCount=" + pointCompressedCount);
     }
 
     @Override
@@ -125,11 +157,11 @@ public class SugarFigureView extends View {
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                this.sugarFigurePathCur=new SugarFigurePath();
+                this.sugarFigurePathCur = new SugarFigurePath();
                 start_x = event.getX();//获取手指落下的x坐标
                 start_y = event.getY();//获取手指落下的y坐标
                 canvas.drawPoint(start_x, start_y, paint);//在画布上画点
-                gPathCur=new GPath(null,start_x, start_y,0,0,GType.G0);
+                gPathCur = new GPath(null, start_x, start_y, 0, 0, GType.G0);
                 this.sugarFigurePathCur.AddGPath(gPathCur);
                 invalidate();
                 performClick();
@@ -140,7 +172,7 @@ public class SugarFigureView extends View {
                 canvas.drawLine(start_x, start_y, end_x, end_y, paint);//在画布上画线
                 start_x = end_x;//将上一个终止点的x坐标赋值给起始点的x坐标
                 start_y = end_y;//将上一个终止点的y坐标赋值给起始点的y坐标
-                gPathCur=new GPath(null,end_x, end_y,0,0,GType.G1);
+                gPathCur = new GPath(null, end_x, end_y, 0, 0, GType.G1);
                 this.sugarFigurePathCur.AddGPath(gPathCur);
                 invalidate();
                 break;

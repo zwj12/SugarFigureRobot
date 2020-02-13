@@ -8,4 +8,16 @@
     tools:context=".SugarFigureActivity"
     tools:showIn="@layout/activity_sugar_figure">
 
+    <com.abb.sugarfigurerobot.SugarFigureView
+        android:id="@+id/sugarFigureView"
+        android:layout_width="320dp"
+        android:layout_height="480dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="20dp"
+        app:figureHeight="960"
+        app:figureWidth="640"
+        app:sugarWidth="5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,7 +1,4 @@
 package com.abb.sugarfigurerobot;
-
-import java.util.regex.Pattern;
-
 /**
  * @author CNMIZHU7
  * @date 2/12/2020
