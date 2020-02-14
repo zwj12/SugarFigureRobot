@@ -23,6 +23,8 @@ public class SocketMessageData {
     private double signalValue;
     private String symbolName;
     private Object symbolValue;
+    private String fileName;
+    private byte[] fileData=new byte[1024];
     private boolean responseError;
 
     public SocketMessageType getSocketMessageType() {
@@ -79,6 +81,22 @@ public class SocketMessageData {
 
     public void setSymbolValue(Object symbolValue) {
         this.symbolValue = symbolValue;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
+    public byte[] getFileData() {
+        return fileData;
+    }
+
+    public void setFileData(byte[] fileData) {
+        this.fileData = fileData;
     }
 
     public boolean isResponseError() {
@@ -168,7 +186,22 @@ public class SocketMessageData {
                 requestDOS.write(0);
                 requestDOS.writeBytes(this.getSymbolValue().toString());
                 break;
-        }
+             case OpenDataFile:
+             case OpenDataBinFile:
+             case DecodeDataFile:
+                 Log.d(TAG,this.getFileName() + " : " +this.requestDataLength  );
+                 this.requestDataLength = this.getFileName().length();
+                 this.packSocketHeader(requestDOS);
+                 requestDOS.writeBytes(this.getFileName());
+                 break;
+             case WriteDatatoFile:
+                 this.packSocketHeader(requestDOS);
+                 requestDOS.write(this.getFileData(),0,this.requestDataLength);
+                 break;
+             case CloseDataFile:
+                 this.packSocketHeader(requestDOS);
+                 break;
+         }
     }
 
     private void packSocketHeader(DataOutputStream requestDOS) throws IOException {
@@ -208,6 +241,11 @@ public class SocketMessageData {
             case SetWeldData:
             case SetSeamData:
             case SetWeaveData:
+            case OpenDataFile:
+            case OpenDataBinFile:
+            case WriteDatatoFile:
+            case DecodeDataFile:
+            case CloseDataFile:
                 if (responseDataLength != this.getResponseDataLength()) {
                     requestDIS.skipBytes(responseDataLength);
                     this.setResponseError(false);

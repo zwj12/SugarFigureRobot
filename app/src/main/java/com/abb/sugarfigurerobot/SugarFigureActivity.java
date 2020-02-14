@@ -24,6 +24,9 @@ import com.abb.robot.SocketMessageData;
 import com.abb.robot.SocketMessageType;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+
 public class SugarFigureActivity extends AppCompatActivity implements SocketAsyncTask.OnSocketListener {
     private static final String TAG = "SugarFigureActivity";
     private SugarFigureView sugarFigureView;
@@ -33,7 +36,7 @@ public class SugarFigureActivity extends AppCompatActivity implements SocketAsyn
     private AlertDialog alertDialog = null;
     private EditText editText;
     private String HOST = "192.168.2.52";
-    private  int PORT = 3003;
+    private int PORT = 3003;
 
     private SocketAsyncTask socketAsyncTask;
 
@@ -117,23 +120,42 @@ public class SugarFigureActivity extends AppCompatActivity implements SocketAsyn
             case R.id.action_send:
 
                 this.socketAsyncTask = new SocketAsyncTask(HOST, PORT, this);
-                SocketMessageData[] socketMessageDatas = new SocketMessageData[7];
-                int i = -1;
+                ArrayList<SocketMessageData> arrayListSocketMessageData = new ArrayList<SocketMessageData>();
+                SocketMessageData socketMessageData;
+                socketMessageData = new SocketMessageData(SocketMessageType.OpenDataBinFile);
+                socketMessageData.setFileName("sugarfigure.bin");
+                arrayListSocketMessageData.add(socketMessageData);
 
-                socketMessageDatas[++i] = new SocketMessageData(SocketMessageType.GetOperatingMode);
-                socketMessageDatas[++i] = new SocketMessageData(SocketMessageType.GetRunMode);
-                socketMessageDatas[++i] = new SocketMessageData(SocketMessageType.GetRobotStatus);
+                byte[] bytes = this.sugarFigureView.getCompressedPathBytes();
+                if (bytes.length == 0) {
+                    return true;
+                }
+                int intReadRawBytesCount = bytes.length / 1021;
+                int intReadRawBytesModulo = bytes.length % 1021;
+                for (int i = 0; i < intReadRawBytesCount; i++) {
+                    socketMessageData = new SocketMessageData(SocketMessageType.WriteDatatoFile);
+                    socketMessageData.setFileData(Arrays.copyOfRange(bytes, i * 1021, 1021));
+                    socketMessageData.setRequestDataLength(1021);
+                    arrayListSocketMessageData.add(socketMessageData);
+                }
+                if (intReadRawBytesModulo > 0) {
+                    socketMessageData = new SocketMessageData(SocketMessageType.WriteDatatoFile);
+                    socketMessageData.setFileData(Arrays.copyOfRange(bytes, intReadRawBytesCount * 1021, intReadRawBytesModulo));
+                    socketMessageData.setRequestDataLength(intReadRawBytesModulo);
+                    arrayListSocketMessageData.add(socketMessageData);
+                }
 
-                socketMessageDatas[++i] = new SocketMessageData(SocketMessageType.GetSignalDo);
-                socketMessageDatas[i].setSignalName("sdoTest1");
-                socketMessageDatas[++i] = new SocketMessageData(SocketMessageType.GetSignalGo);
-                socketMessageDatas[i].setSignalName("sgoTest1");
-                socketMessageDatas[++i] = new SocketMessageData(SocketMessageType.GetSignalAo);
-                socketMessageDatas[i].setSignalName("saoTest1");
+                socketMessageData = new SocketMessageData(SocketMessageType.CloseDataFile);
+                arrayListSocketMessageData.add(socketMessageData);
 
-                socketMessageDatas[++i] = new SocketMessageData(SocketMessageType.CloseConnection);
+                socketMessageData = new SocketMessageData(SocketMessageType.DecodeDataFile);
+                socketMessageData.setFileName("sugarfigure.bin");
+                arrayListSocketMessageData.add(socketMessageData);
 
-                socketAsyncTask.execute(socketMessageDatas);
+                socketMessageData = new SocketMessageData(SocketMessageType.CloseConnection);
+                arrayListSocketMessageData.add(socketMessageData);
+
+                socketAsyncTask.execute(arrayListSocketMessageData.toArray(new SocketMessageData[arrayListSocketMessageData.size()]));
                 return true;
 
             case R.id.action_settings:

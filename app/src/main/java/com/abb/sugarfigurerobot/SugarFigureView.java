@@ -14,6 +14,9 @@ import android.view.ViewGroup;
 
 import androidx.annotation.Nullable;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -84,6 +87,35 @@ public class SugarFigureView extends View {
     public void clearPath() {
         this.bitmap.eraseColor(Color.BLACK);
         this.listSugarFigurePath.clear();
+    }
+
+    public byte[] getCompressedPathBytes() {
+        int pointCount = 0;
+        int pointCompressedCount = 0;
+        ByteArrayOutputStream compressedPathBAOS = new ByteArrayOutputStream(1024);
+        DataOutputStream compressedPathDOS = new DataOutputStream(compressedPathBAOS);
+        try{
+            for (SugarFigurePath sugarFigurePath : this.listSugarFigurePath) {
+                sugarFigurePath.CompressLayerPath();
+                ArrayList<? extends Point> listGPath = sugarFigurePath.getListGPathCompressed();
+                compressedPathDOS.writeInt(GType.G0.getCode());
+                compressedPathDOS.writeFloat((float) listGPath.get(0 ).x);
+                compressedPathDOS.writeFloat((float) listGPath.get(0 ).y);
+                compressedPathDOS.writeFloat(0);
+                for (int i = 1; i < listGPath.size(); i++) {
+                    compressedPathDOS.writeInt(GType.G1.getCode());
+                    compressedPathDOS.writeFloat((float) listGPath.get(i ).x);
+                    compressedPathDOS.writeFloat((float) listGPath.get(i ).y);
+                    compressedPathDOS.writeFloat(0);
+                }
+                pointCount += sugarFigurePath.getListGPath().size();
+                pointCompressedCount += sugarFigurePath.getListGPathCompressed().size();
+            }
+        }catch (IOException e){
+            Log.e(TAG,e.getMessage());
+        }
+        Log.d(TAG, "pointCount=" + pointCount + ", pointCompressedCount=" + pointCompressedCount);
+        return compressedPathBAOS.toByteArray();
     }
 
     public void drawCompressedPath() {

@@ -1,13 +1,10 @@
 package com.abb.robot;
 
-import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Message;
 import android.util.Log;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -56,6 +53,9 @@ public class SocketAsyncTask extends AsyncTask<SocketMessageData, Integer, Socke
             connectToRobot();
             byte[] receiveBytes = new byte[1024];
             for (int i = 0; i < socketMessageDatas.length; i++) {
+                if(socketMessageDatas[i]==null){
+                    continue;
+                }
                 dataOutputStream.write(socketMessageDatas[i].getRequestRawBytes());
                 dataOutputStream.flush();
                 dataInputStream.read(receiveBytes, 0, 3);
@@ -88,7 +88,7 @@ public class SocketAsyncTask extends AsyncTask<SocketMessageData, Integer, Socke
     protected void onPostExecute(SocketMessageData[] socketMessageDatas) {
         super.onPostExecute(socketMessageDatas);
         for (SocketMessageData socketMessageData : socketMessageDatas) {
-            if(socketMessageDatas!=null){
+            if(socketMessageData!=null){
                 Log.d(TAG, String.format("onPostExecute in UI thread, %s", socketMessageData.responseValue));
             }
         }

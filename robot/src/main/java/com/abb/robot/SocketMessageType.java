@@ -29,7 +29,9 @@ public enum SocketMessageType {
     OpenDataFile(40, -1, 168, 0),
     OpenDataBinFile(41, -1, 169, 0),
     WriteDatatoFile(42, -1, 170, 0),
-    CloseDataFile(43, -1, 171, 0),
+    CloseDataFile(43, 0, 171, 0),
+
+    DecodeDataFile(48, -1, 176, 0),
 
     Error(-1, 0, 255, 0);
 

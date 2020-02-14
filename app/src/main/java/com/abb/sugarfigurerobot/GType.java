@@ -7,7 +7,19 @@ package com.abb.sugarfigurerobot;
  */
 
 public enum GType {
-    G0
-    ,G1
-    ,G17
+    G0(0)
+    ,G1(1)
+    ,G17(17);
+
+    private static final String TAG = "GType";
+
+    private final int code;
+
+    public int getCode() {
+        return code;
+    }
+
+    GType(int code) {
+        this.code = code;
+    }
 }
