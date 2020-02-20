@@ -132,17 +132,20 @@ public class SugarFigureActivity extends AppCompatActivity implements SocketAsyn
                 }
                 int intReadRawBytesCount = bytes.length / 1021;
                 int intReadRawBytesModulo = bytes.length % 1021;
+                Log.d(TAG,"intReadRawBytesCount=" + intReadRawBytesCount + ", intReadRawBytesModulo=" + intReadRawBytesModulo);
                 for (int i = 0; i < intReadRawBytesCount; i++) {
                     socketMessageData = new SocketMessageData(SocketMessageType.WriteDatatoFile);
-                    socketMessageData.setFileData(Arrays.copyOfRange(bytes, i * 1021, 1021));
+                    socketMessageData.setFileData(Arrays.copyOfRange(bytes, i * 1021, i * 1021+1021));
                     socketMessageData.setRequestDataLength(1021);
                     arrayListSocketMessageData.add(socketMessageData);
+                    Log.d(TAG,"WriteDatatoFile:" + i );
                 }
                 if (intReadRawBytesModulo > 0) {
                     socketMessageData = new SocketMessageData(SocketMessageType.WriteDatatoFile);
-                    socketMessageData.setFileData(Arrays.copyOfRange(bytes, intReadRawBytesCount * 1021, intReadRawBytesModulo));
+                    socketMessageData.setFileData(Arrays.copyOfRange(bytes, intReadRawBytesCount * 1021,intReadRawBytesCount * 1021+ intReadRawBytesModulo));
                     socketMessageData.setRequestDataLength(intReadRawBytesModulo);
                     arrayListSocketMessageData.add(socketMessageData);
+                    Log.d(TAG,"WriteDatatoFile:" + intReadRawBytesModulo);
                 }
 
                 socketMessageData = new SocketMessageData(SocketMessageType.CloseDataFile);
@@ -150,6 +153,16 @@ public class SugarFigureActivity extends AppCompatActivity implements SocketAsyn
 
                 socketMessageData = new SocketMessageData(SocketMessageType.DecodeDataFile);
                 socketMessageData.setFileName("sugarfigure.bin");
+                arrayListSocketMessageData.add(socketMessageData);
+
+                socketMessageData = new SocketMessageData(SocketMessageType.SetSignalGo);
+                socketMessageData.setSignalName("sgoOrderCode");
+                socketMessageData.setSignalValue(101);
+                arrayListSocketMessageData.add(socketMessageData);
+
+                socketMessageData = new SocketMessageData(SocketMessageType.PulseSignalDO);
+                socketMessageData.setSignalName("sdoRunPart");
+                socketMessageData.setSignalValue(1);
                 arrayListSocketMessageData.add(socketMessageData);
 
                 socketMessageData = new SocketMessageData(SocketMessageType.CloseConnection);

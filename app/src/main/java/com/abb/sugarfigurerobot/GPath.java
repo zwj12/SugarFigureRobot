@@ -11,7 +11,7 @@ public class GPath extends GTarget implements Cloneable {
     private double length;
     private double eUnit;
     private GPath gPathNext = null;
-    private GType gType = GType.G0;
+    private GType gType = GType.MoveL;
 
     public GPath getgPathPre() {
         return gPathPre;
@@ -92,19 +92,19 @@ public class GPath extends GTarget implements Cloneable {
         return String.format("%s\t%8.1f\t%8.1f\t%8.1f\t%f\t%f\t%8.1f\t%8.3f", gType, x, y, z, e, eCur, length, eUnit);
     }
 
-    public String toEngraveString(Point pointOffset) {
+    public String toProcessString(Point pointOffset) {
         int engravingType = 0;
         if (this.gPathNext == null) {
-            if (this.gType == GType.G1) {
+            if (this.gType == GType.MoveL) {
                 engravingType = 3;
             } else {
                 engravingType = 0;
             }
-        } else if (this.gType == GType.G0 && this.gPathNext.gType == GType.G1) {
+        } else if (this.gType == GType.MoveL && this.gPathNext.gType == GType.MoveL) {
             engravingType = 1;
-        } else if (this.gType == GType.G1 && this.gPathNext.gType == GType.G1) {
+        } else if (this.gType == GType.MoveL && this.gPathNext.gType == GType.MoveL) {
             engravingType = 2;
-        } else if (this.gType == GType.G1 && this.gPathNext.gType == GType.G0) {
+        } else if (this.gType == GType.MoveL && this.gPathNext.gType == GType.MoveL) {
             engravingType = 3;
         } else {
             engravingType = 0;

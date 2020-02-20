@@ -7,9 +7,15 @@ package com.abb.sugarfigurerobot;
  */
 
 public enum GType {
-    G0(0)
-    ,G1(1)
-    ,G17(17);
+    ProcessLStart(1)
+    ,ProcessL(2)
+    ,ProcessLEnd(3)
+    ,ProcessCStart(4)
+    ,ProcessC(5)
+    ,ProcessCEnd(6)
+    ,MoveL(7)
+    ,MoveC(8)
+    ,MoveJ(9);
 
     private static final String TAG = "GType";
 

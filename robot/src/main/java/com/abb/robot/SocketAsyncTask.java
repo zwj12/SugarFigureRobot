@@ -89,7 +89,7 @@ public class SocketAsyncTask extends AsyncTask<SocketMessageData, Integer, Socke
         super.onPostExecute(socketMessageDatas);
         for (SocketMessageData socketMessageData : socketMessageDatas) {
             if(socketMessageData!=null){
-                Log.d(TAG, String.format("onPostExecute in UI thread, %s", socketMessageData.responseValue));
+                Log.d(TAG, String.format("onPostExecute in UI thread, %s", socketMessageData.getSocketMessageType()));
             }
         }
         this.socketListener.refreshUI(socketMessageDatas);

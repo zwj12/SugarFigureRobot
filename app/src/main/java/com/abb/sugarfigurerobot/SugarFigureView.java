@@ -41,6 +41,11 @@ public class SugarFigureView extends View {
     private float end_x;
     private float end_y;
 
+    private float figureScaleX = 250.0f / 640;
+    private float figureScaleY = 375.0f / 960;
+    private float figureOffsetX =-250;
+    private float figureOffsetY = -250;
+
     private ArrayList<SugarFigurePath> listSugarFigurePath = new ArrayList<SugarFigurePath>();
     private SugarFigurePath sugarFigurePathCur;
     private GPath gPathCur;
@@ -94,25 +99,29 @@ public class SugarFigureView extends View {
         int pointCompressedCount = 0;
         ByteArrayOutputStream compressedPathBAOS = new ByteArrayOutputStream(1024);
         DataOutputStream compressedPathDOS = new DataOutputStream(compressedPathBAOS);
-        try{
+        try {
             for (SugarFigurePath sugarFigurePath : this.listSugarFigurePath) {
                 sugarFigurePath.CompressLayerPath();
                 ArrayList<? extends Point> listGPath = sugarFigurePath.getListGPathCompressed();
-                compressedPathDOS.writeInt(GType.G0.getCode());
-                compressedPathDOS.writeFloat((float) listGPath.get(0 ).x);
-                compressedPathDOS.writeFloat((float) listGPath.get(0 ).y);
+                compressedPathDOS.writeInt(GType.ProcessLStart.getCode());
+                compressedPathDOS.writeFloat((float) listGPath.get(0).x * figureScaleX+figureOffsetX);
+                compressedPathDOS.writeFloat((float) listGPath.get(0).y * figureScaleY+figureOffsetY);
                 compressedPathDOS.writeFloat(0);
-                for (int i = 1; i < listGPath.size(); i++) {
-                    compressedPathDOS.writeInt(GType.G1.getCode());
-                    compressedPathDOS.writeFloat((float) listGPath.get(i ).x);
-                    compressedPathDOS.writeFloat((float) listGPath.get(i ).y);
+                for (int i = 1; i < listGPath.size() - 1; i++) {
+                    compressedPathDOS.writeInt(GType.ProcessL.getCode());
+                    compressedPathDOS.writeFloat((float) listGPath.get(i).x * figureScaleX+figureOffsetX);
+                    compressedPathDOS.writeFloat((float) listGPath.get(i).y * figureScaleY+figureOffsetY);
                     compressedPathDOS.writeFloat(0);
                 }
+                compressedPathDOS.writeInt(GType.ProcessLEnd.getCode());
+                compressedPathDOS.writeFloat((float) listGPath.get(listGPath.size() - 1).x * figureScaleX+figureOffsetX);
+                compressedPathDOS.writeFloat((float) listGPath.get(listGPath.size() - 1).y * figureScaleY+figureOffsetY);
+                compressedPathDOS.writeFloat(0);
                 pointCount += sugarFigurePath.getListGPath().size();
                 pointCompressedCount += sugarFigurePath.getListGPathCompressed().size();
             }
-        }catch (IOException e){
-            Log.e(TAG,e.getMessage());
+        } catch (IOException e) {
+            Log.e(TAG, e.getMessage());
         }
         Log.d(TAG, "pointCount=" + pointCount + ", pointCompressedCount=" + pointCompressedCount);
         return compressedPathBAOS.toByteArray();
@@ -193,7 +202,7 @@ public class SugarFigureView extends View {
                 start_x = event.getX();//获取手指落下的x坐标
                 start_y = event.getY();//获取手指落下的y坐标
                 canvas.drawPoint(start_x, start_y, paint);//在画布上画点
-                gPathCur = new GPath(null, start_x, start_y, 0, 0, GType.G0);
+                gPathCur = new GPath(null, start_x, start_y, 0, 0, GType.ProcessLStart);
                 this.sugarFigurePathCur.AddGPath(gPathCur);
                 invalidate();
                 performClick();
@@ -204,7 +213,7 @@ public class SugarFigureView extends View {
                 canvas.drawLine(start_x, start_y, end_x, end_y, paint);//在画布上画线
                 start_x = end_x;//将上一个终止点的x坐标赋值给起始点的x坐标
                 start_y = end_y;//将上一个终止点的y坐标赋值给起始点的y坐标
-                gPathCur = new GPath(null, end_x, end_y, 0, 0, GType.G1);
+                gPathCur = new GPath(null, end_x, end_y, 0, 0, GType.ProcessL);
                 this.sugarFigurePathCur.AddGPath(gPathCur);
                 invalidate();
                 break;

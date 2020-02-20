@@ -24,7 +24,7 @@ public class SocketMessageData {
     private String symbolName;
     private Object symbolValue;
     private String fileName;
-    private byte[] fileData=new byte[1024];
+    private byte[] fileData = new byte[1024];
     private boolean responseError;
 
     public SocketMessageType getSocketMessageType() {
@@ -106,12 +106,13 @@ public class SocketMessageData {
     public void setResponseError(boolean responseError) {
         this.responseError = responseError;
     }
+
     public Object responseValue;
 
-    public SocketMessageData(SocketMessageType socketMessageType){
-        this.socketMessageType=socketMessageType;
+    public SocketMessageData(SocketMessageType socketMessageType) {
+        this.socketMessageType = socketMessageType;
     }
-    
+
     public byte[] getRequestRawBytes() throws IOException {
         ByteArrayOutputStream requestBAOS = new ByteArrayOutputStream(1024);
         this.packRequestRawBytes(requestBAOS);
@@ -126,7 +127,7 @@ public class SocketMessageData {
 
     //Don't support Socket stream, only support ByteArrayInputStream or ByteArrayOutputStream
     public void packRequestRawBytes(DataOutputStream requestDOS) throws IOException {
-         switch (socketMessageType) {
+        switch (socketMessageType) {
             case CloseConnection:
             case GetOperatingMode:
             case GetRunMode:
@@ -162,6 +163,12 @@ public class SocketMessageData {
                 requestDOS.writeBytes(this.getSignalName());
 //                Log.d(TAG,String.format("%d,%d",this.requestCommand,this.requestDataLength));
                 break;
+            case PulseSignalDO:
+                this.requestDataLength = this.getSignalName().length() + 4;
+                this.packSocketHeader(requestDOS);
+                requestDOS.writeFloat((float)this.getSignalValue());
+                requestDOS.writeBytes(this.getSignalName());
+                break;
             case GetNumData:
             case GetWeldData:
             case GetSeamData:
@@ -169,7 +176,7 @@ public class SocketMessageData {
                 this.requestDataLength = this.getSymbolName().length();
                 this.packSocketHeader(requestDOS);
                 requestDOS.writeBytes(this.getSymbolName());
-                Log.d(TAG,this.getSymbolName());
+                Log.d(TAG, this.getSymbolName());
                 break;
             case SetNumData:
                 this.requestDataLength = this.getSymbolName().length() + 4;
@@ -186,22 +193,22 @@ public class SocketMessageData {
                 requestDOS.write(0);
                 requestDOS.writeBytes(this.getSymbolValue().toString());
                 break;
-             case OpenDataFile:
-             case OpenDataBinFile:
-             case DecodeDataFile:
-                 Log.d(TAG,this.getFileName() + " : " +this.requestDataLength  );
-                 this.requestDataLength = this.getFileName().length();
-                 this.packSocketHeader(requestDOS);
-                 requestDOS.writeBytes(this.getFileName());
-                 break;
-             case WriteDatatoFile:
-                 this.packSocketHeader(requestDOS);
-                 requestDOS.write(this.getFileData(),0,this.requestDataLength);
-                 break;
-             case CloseDataFile:
-                 this.packSocketHeader(requestDOS);
-                 break;
-         }
+            case OpenDataFile:
+            case OpenDataBinFile:
+            case DecodeDataFile:
+                Log.d(TAG, this.getFileName() + " : " + this.requestDataLength);
+                this.requestDataLength = this.getFileName().length();
+                this.packSocketHeader(requestDOS);
+                requestDOS.writeBytes(this.getFileName());
+                break;
+            case WriteDatatoFile:
+                this.packSocketHeader(requestDOS);
+                requestDOS.write(this.getFileData(), 0, this.requestDataLength);
+                break;
+            case CloseDataFile:
+                this.packSocketHeader(requestDOS);
+                break;
+        }
     }
 
     private void packSocketHeader(DataOutputStream requestDOS) throws IOException {
@@ -237,6 +244,7 @@ public class SocketMessageData {
             case SetSignalDo:
             case SetSignalGo:
             case SetSignalAo:
+            case PulseSignalDO:
             case SetNumData:
             case SetWeldData:
             case SetSeamData:
@@ -302,7 +310,7 @@ public class SocketMessageData {
                     this.setResponseError(false);
                     return -1;
                 } else {
-                    this.setSymbolValue( requestDIS.readFloat());
+                    this.setSymbolValue(requestDIS.readFloat());
                     this.responseValue = this.getSymbolValue();
                 }
                 break;
@@ -315,7 +323,7 @@ public class SocketMessageData {
                 } else {
                     String strValue = new String(valueBytes);
                     if (!(this.getSymbolValue() instanceof WeldData)) {
-                        this.setSymbolValue( new WeldData());
+                        this.setSymbolValue(new WeldData());
                     }
                     ((WeldData) this.getSymbolValue()).parse(strValue);
                     this.responseValue = this.getSymbolValue();
@@ -330,7 +338,7 @@ public class SocketMessageData {
                 } else {
                     String strValue = new String(valueBytes);
                     if (!(this.getSymbolValue() instanceof SeamData)) {
-                        this.setSymbolValue( new SeamData());
+                        this.setSymbolValue(new SeamData());
                     }
                     ((SeamData) this.getSymbolValue()).parse(strValue);
                     this.responseValue = this.getSymbolValue();
@@ -345,7 +353,7 @@ public class SocketMessageData {
                 } else {
                     String strValue = new String(valueBytes);
                     if (!(this.getSymbolValue() instanceof WeaveData)) {
-                        this.setSymbolValue( new WeaveData());
+                        this.setSymbolValue(new WeaveData());
                     }
                     ((WeaveData) this.getSymbolValue()).parse(strValue);
                     this.responseValue = this.getSymbolValue();

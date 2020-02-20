@@ -16,6 +16,7 @@ public enum SocketMessageType {
     SetSignalDo(16, -1, 144, 0),
     SetSignalGo(17, -1, 145, 0),
     SetSignalAo(18, -1, 146, 0),
+    PulseSignalDO(19, -1, 146, 0),
 
     GetNumData(24, -1, 152, 4),
     SetNumData(25, -1, 153, 0),
