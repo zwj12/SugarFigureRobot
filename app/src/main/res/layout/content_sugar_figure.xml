@@ -10,14 +10,14 @@
 
     <com.abb.sugarfigurerobot.SugarFigureView
         android:id="@+id/sugarFigureView"
-        android:layout_width="320dp"
-        android:layout_height="480dp"
+        android:layout_width="360dp"
+        android:layout_height="240dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="20dp"
-        app:figureHeight="960"
-        app:figureWidth="640"
-        app:sugarWidth="5"
+        android:layout_marginTop="16dp"
+        app:figureHeight="600"
+        app:figureWidth="900"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:sugarWidth="5" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

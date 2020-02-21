@@ -21,7 +21,7 @@ public class SugarFigurePath {
         return listGPathCompressed;
     }
 
-    private static double distanceTolerance = 10;
+    private static double distanceTolerance = 5;
 
     public static Point pointOffset = new Point(725, 10, 200);
     //	public static Point pointOffset = new Point(0,0,0);

@@ -1,4 +1,5 @@
 MODULE SocketModule
+    LOCAL CONST string TAG:="SocketModule";
     VAR socketdev socketServer;
     VAR socketdev socketClient;
     VAR string strIPAddressServer:="127.0.0.1";
@@ -9,7 +10,7 @@ MODULE SocketModule
     !stringHeader: Only indexs from 1 to 128 can be set, the indexs from 129 to 256 are for response command
     CONST string stringHeader{256}:=["CloseConnection","GetOperatingMode","GetRunMode","","","","","GetRobotStatus",
         "GetSignalDo","GetSignalGo","GetSignalAo","GetSignalDi","GetSignalGi","GetSignalAi","","",
-        "SetSignalDo","SetSignalGo","SetSignalAo","","","","","",
+        "SetSignalDo","SetSignalGo","SetSignalAo","PulseSignalDO","","","","",
         "GetNumData","SetNumData","","","","","GetDataTaskName","SetDataTaskName",
         "GetWeldData","SetWeldData","GetSeamData","SetSeamData","GetWeaveData","SetWeaveData","","",
         "OpenDataFile","OpenDataBinFile","WriteDatatoFile","CloseDataFile","","","","",
@@ -244,6 +245,26 @@ MODULE SocketModule
         ENDIF
     ENDPROC
 
+    PROC PulseSignalDO(byte commandIn)
+        VAR byte commandOut;
+        VAR num numPLength;
+        VAR string strSignalName;
+        VAR signaldo signaldoTemp;
+        UnpackRawBytes raw_data_in\Network,4,numPLength\Float4;
+        UnpackRawBytes raw_data_in\Network,8,strSignalName\ASCII:=numDataInLength-4;
+        AliasIO strSignalName,signaldoTemp;
+        PulseDO\PLength:=numPLength,signaldoTemp;
+        commandOut:=commandIn+128;
+        ResponseSocketCommand commandOut;
+        Logging\DEBUG,\LoggerName:="SocketModule",stringHeader{commandIn+1}+" : "+strSignalName;
+    ERROR
+        IF ERRNO=ERR_ALIASIO_DEF OR ERRNO=ERR_ALIASIO_TYPE OR ERRNO=ERR_NO_ALIASIO_DEF THEN
+            Logging\ERRORING,\LoggerName:="SocketModule","Signal ("+strSignalName+") is not exist";
+            ResponseError commandIn;
+            RETURN ;
+        ENDIF
+    ENDPROC
+
     PROC GetSignalDo(byte commandIn)
         VAR byte commandOut;
         VAR byte byteDoValue;
@@ -451,8 +472,9 @@ MODULE SocketModule
             WriteRawBytes iodevDataFile,raw_data_temp\NoOfBytes:=numDataInLength;
             commandOut:=commandIn+128;
             ResponseSocketCommand commandOut;
+            Logging\DEBUG\LoggerName:=TAG,"numDataInLength = "+ValToStr(numDataInLength)+"("+ValToStr(RawBytesLen(raw_data_in))+")";
         ELSE
-            TPWrite "numDataInLength = "+ValToStr(numDataInLength)+", it can not be great than 1021";
+            Logging\DEBUG\LoggerName:=TAG,"numDataInLength = "+ValToStr(numDataInLength)+", it can not be great than 1021";
             ResponseError commandIn;
         ENDIF
     ENDPROC
@@ -463,191 +485,6 @@ MODULE SocketModule
         commandOut:=commandIn+128;
         ResponseSocketCommand commandOut;
         Logging\DEBUG,\LoggerName:="SocketModule","Close file: "+ValToStr(strDataFileName);
-    ENDPROC
-
-    LOCAL PROC GetWeldData(byte commandIn)
-        VAR byte commandOut;
-        VAR string strSymbolName;
-        VAR welddata symbolValue;
-        UnpackRawBytes raw_data_in\Network,2,numDataInLength\IntX:=UINT;
-        UnpackRawBytes raw_data_in\Network,4,strSymbolName\ASCII:=numDataInLength;
-        GetDataVal strSymbolName\TaskName:=strDataTaskName,symbolValue;
-        commandOut:=commandIn+128;
-        ClearRawBytes raw_data_out;
-        PackRawBytes ValToStr(symbolValue),raw_data_out\Network,1\ASCII;
-        PackSocketHeader commandOut;
-        SocketSend socketClient\RawData:=raw_data_out;
-        Logging\DEBUG,\LoggerName:="SocketModule",stringHeader{commandIn+1}+" : "+strSymbolName+" : "+ValToStr(symbolValue);
-
-    ERROR
-        IF ERRNO=ERR_SYM_ACCESS OR ERRNO=ERR_INVDIM OR ERRNO=ERR_SYMBOL_TYPE OR ERRNO=ERR_TASKNAME THEN
-            Logging\ERRORING,\LoggerName:="SocketModule","Symbol ("+strSymbolName+") of WeldData is not exist";
-            ResponseError commandIn;
-            RETURN ;
-        ENDIF
-    ENDPROC
-
-    LOCAL PROC SetWeldData(byte commandIn)
-        VAR byte commandOut;
-        VAR string strSymbolName;
-        VAR string strSymbolValue;
-        VAR welddata symbolValue;
-        VAR string strNullCharacter:="\00";
-        VAR string strCharacter:="\00";
-        VAR num numCurIndex:=4;
-        VAR bool boolConversionSucceeded;
-        UnpackRawBytes raw_data_in\Network,numCurIndex,strCharacter\ASCII:=1;
-        WHILE strCharacter<>strNullCharacter DO
-            Incr numCurIndex;
-            UnpackRawBytes raw_data_in\Network,numCurIndex,strCharacter\ASCII:=1;
-        ENDWHILE
-        IF numCurIndex=4 THEN
-            Logging\ERRORING,\LoggerName:="SocketModule","No symbol name";
-            ResponseError commandIn;
-            RETURN ;
-        ENDIF
-        UnpackRawBytes raw_data_in\Network,4,strSymbolName\ASCII:=numCurIndex-4;
-        UnpackRawBytes raw_data_in\Network,numCurIndex+1,strSymbolValue\ASCII:=numDataInLength+3-numCurIndex;
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue);
-        IF boolConversionSucceeded=FALSE THEN
-            Logging\ERRORING,\LoggerName:="SocketModule",strSymbolValue;
-            Logging\ERRORING,\LoggerName:="SocketModule","WeldData Conversion Failed: "+ValToStr(numCurIndex)+", "+ValToStr(numDataInLength);
-            ResponseError commandIn;
-            RETURN ;
-        ENDIF
-        SetDataVal strSymbolName\TaskName:=strDataTaskName,symbolValue;
-        commandOut:=commandIn+128;
-        ResponseSocketCommand commandOut;
-        Logging\DEBUG,\LoggerName:="SocketModule",stringHeader{commandIn+1}+" : "+strSymbolName+" : "+ValToStr(symbolValue);
-
-    ERROR
-        IF ERRNO=ERR_SYM_ACCESS OR ERRNO=ERR_INVDIM OR ERRNO=ERR_SYMBOL_TYPE OR ERRNO=ERR_TASKNAME THEN
-            Logging\ERRORING,\LoggerName:="SocketModule","Symbol ("+strSymbolName+") of WeldData is not exist";
-            ResponseError commandIn;
-            RETURN ;
-        ENDIF
-    ENDPROC
-
-    LOCAL PROC GetSeamData(byte commandIn)
-        VAR byte commandOut;
-        VAR string strSymbolName;
-        VAR Seamdata symbolValue;
-        UnpackRawBytes raw_data_in\Network,2,numDataInLength\IntX:=UINT;
-        UnpackRawBytes raw_data_in\Network,4,strSymbolName\ASCII:=numDataInLength;
-        GetDataVal strSymbolName\TaskName:=strDataTaskName,symbolValue;
-        commandOut:=commandIn+128;
-        ClearRawBytes raw_data_out;
-        PackRawBytes "["+ValToStr(symbolValue.purge_time)+","+ValToStr(symbolValue.preflow_time)+",",raw_data_out\Network,RawBytesLen(raw_data_out)+1\ASCII;
-        PackRawBytes ValToStr(symbolValue.ign_arc)+",",raw_data_out\Network,RawBytesLen(raw_data_out)+1\ASCII;
-        PackRawBytes ValToStr(symbolValue.ign_move_delay)+","+ValToStr(symbolValue.scrape_start)+","+ValToStr(symbolValue.heat_speed)+",",raw_data_out\Network,RawBytesLen(raw_data_out)+1\ASCII;
-        PackRawBytes ValToStr(symbolValue.heat_time)+","+ValToStr(symbolValue.heat_distance)+",",raw_data_out\Network,RawBytesLen(raw_data_out)+1\ASCII;
-        PackRawBytes ValToStr(symbolValue.heat_arc)+",",raw_data_out\Network,RawBytesLen(raw_data_out)+1\ASCII;
-        PackRawBytes ValToStr(symbolValue.cool_time)+","+ValToStr(symbolValue.fill_time)+",",raw_data_out\Network,RawBytesLen(raw_data_out)+1\ASCII;
-        PackRawBytes ValToStr(symbolValue.fill_arc)+",",raw_data_out\Network,RawBytesLen(raw_data_out)+1\ASCII;
-        PackRawBytes ValToStr(symbolValue.bback_time)+","+ValToStr(symbolValue.rback_time)+",",raw_data_out\Network,RawBytesLen(raw_data_out)+1\ASCII;
-        PackRawBytes ValToStr(symbolValue.bback_arc)+",",raw_data_out\Network,RawBytesLen(raw_data_out)+1\ASCII;
-        PackRawBytes ValToStr(symbolValue.postflow_time)+"]",raw_data_out\Network,RawBytesLen(raw_data_out)+1\ASCII;
-        PackSocketHeader commandOut;
-        SocketSend socketClient\RawData:=raw_data_out;
-
-    ERROR
-        IF ERRNO=ERR_SYM_ACCESS OR ERRNO=ERR_INVDIM OR ERRNO=ERR_SYMBOL_TYPE OR ERRNO=ERR_TASKNAME THEN
-            Logging\ERRORING,\LoggerName:="SocketModule","Symbol ("+strSymbolName+") of SeamData is not exist";
-            ResponseError commandIn;
-            RETURN ;
-        ENDIF
-    ENDPROC
-
-    LOCAL PROC SetSeamData(byte commandIn)
-        VAR byte commandOut;
-        VAR string strSymbolName;
-        VAR string strSymbolValue;
-        VAR Seamdata symbolValue;
-        VAR string strNullCharacter:="\00";
-        VAR string strCommaCharacter:=",";
-        VAR string strRightBracketCharacter:="]";
-        VAR string strCharacter:="\00";
-        VAR num numStartIndex:=0;
-        VAR num numCurIndex:=4;
-        VAR bool boolConversionSucceeded;
-        UnpackRawBytes raw_data_in\Network,numCurIndex,strCharacter\ASCII:=1;
-        WHILE strCharacter<>strNullCharacter DO
-            Incr numCurIndex;
-            UnpackRawBytes raw_data_in\Network,numCurIndex,strCharacter\ASCII:=1;
-        ENDWHILE
-        IF numCurIndex=4 THEN
-            Logging\ERRORING,\LoggerName:="SocketModule","No symbol name";
-            ResponseError commandIn;
-            RETURN ;
-        ENDIF
-        UnpackRawBytes raw_data_in\Network,4,strSymbolName\ASCII:=numCurIndex-4;
-
-        ![0,1.5,[0,0,0,0,0,0,0,0,0],0,0,0,0,0,[0,0,0,0,0,0,0,0,0],0,0,[0,0,0,0,0,0,0,0,0],0,0,[0,0,0,0,0,0,0,0,0],0]
-        numCurIndex:=numCurIndex+2;
-        Logging\DEBUG,\LoggerName:="SocketModule","numCurIndex="+ValToStr(numCurIndex);
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strCommaCharacter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.purge_time);
-
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strCommaCharacter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.preflow_time);
-
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strRightBracketCharacter\includeDelimiter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.ign_arc);
-
-        Incr numCurIndex;
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strCommaCharacter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.ign_move_delay);
-
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strCommaCharacter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.scrape_start);
-
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strCommaCharacter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.heat_speed);
-
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strCommaCharacter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.heat_time);
-
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strCommaCharacter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.heat_distance);
-
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strRightBracketCharacter\includeDelimiter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.heat_arc);
-
-        Incr numCurIndex;
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strCommaCharacter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.cool_time);
-
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strCommaCharacter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.fill_time);
-
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strRightBracketCharacter\includeDelimiter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.fill_arc);
-
-        Incr numCurIndex;
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strCommaCharacter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.bback_time);
-
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strCommaCharacter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.rback_time);
-
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strRightBracketCharacter\includeDelimiter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.bback_arc);
-
-        Incr numCurIndex;
-        strSymbolValue:=GetStringofSymbolValue(numCurIndex,strRightBracketCharacter);
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue.postflow_time);
-
-        SetDataVal strSymbolName\TaskName:=strDataTaskName,symbolValue;
-        commandOut:=commandIn+128;
-        ResponseSocketCommand commandOut;
-        Logging\DEBUG,\LoggerName:="SocketModule",stringHeader{commandIn+1}+" : "+strSymbolName;
-
-    ERROR
-        IF ERRNO=ERR_SYM_ACCESS OR ERRNO=ERR_INVDIM OR ERRNO=ERR_SYMBOL_TYPE OR ERRNO=ERR_TASKNAME THEN
-            Logging\ERRORING,\LoggerName:="SocketModule","Symbol ("+strSymbolName+") of SeamData is not exist";
-            ResponseError commandIn;
-            RETURN ;
-        ENDIF
     ENDPROC
 
     FUNC string GetStringofSymbolValue(inout num numStartIndex,string strDelimiterCharacter\switch includeDelimiter)
@@ -671,74 +508,17 @@ MODULE SocketModule
         RETURN strSymbolValue;
     ENDFUNC
 
-    LOCAL PROC GetWeaveData(byte commandIn)
-        VAR byte commandOut;
-        VAR string strSymbolName;
-        VAR Weavedata symbolValue;
-        UnpackRawBytes raw_data_in\Network,2,numDataInLength\IntX:=UINT;
-        UnpackRawBytes raw_data_in\Network,4,strSymbolName\ASCII:=numDataInLength;
-        GetDataVal strSymbolName\TaskName:=strDataTaskName,symbolValue;
-        commandOut:=commandIn+128;
-        ClearRawBytes raw_data_out;
-        PackRawBytes ValToStr(symbolValue),raw_data_out\Network,1\ASCII;
-        PackSocketHeader commandOut;
-        SocketSend socketClient\RawData:=raw_data_out;
-
-    ERROR
-        IF ERRNO=ERR_SYM_ACCESS OR ERRNO=ERR_INVDIM OR ERRNO=ERR_SYMBOL_TYPE OR ERRNO=ERR_TASKNAME THEN
-            Logging\ERRORING,\LoggerName:="SocketModule","Symbol ("+strSymbolName+") of WeaveData is not exist";
-            ResponseError commandIn;
-            RETURN ;
-        ENDIF
-    ENDPROC
-
-    LOCAL PROC SetWeaveData(byte commandIn)
-        VAR byte commandOut;
-        VAR string strSymbolName;
-        VAR string strSymbolValue;
-        VAR Weavedata symbolValue;
-        VAR string strNullCharacter:="\00";
-        VAR string strCharacter:="\00";
-        VAR num numCurIndex:=4;
-        VAR bool boolConversionSucceeded;
-        UnpackRawBytes raw_data_in\Network,numCurIndex,strCharacter\ASCII:=1;
-        WHILE strCharacter<>strNullCharacter DO
-            Incr numCurIndex;
-            UnpackRawBytes raw_data_in\Network,numCurIndex,strCharacter\ASCII:=1;
-        ENDWHILE
-        IF numCurIndex=4 THEN
-            Logging\ERRORING,\LoggerName:="SocketModule","No symbol name";
-            ResponseError commandIn;
-            RETURN ;
-        ENDIF
-        UnpackRawBytes raw_data_in\Network,4,strSymbolName\ASCII:=numCurIndex-4;
-        UnpackRawBytes raw_data_in\Network,numCurIndex+1,strSymbolValue\ASCII:=numDataInLength+3-numCurIndex;
-        boolConversionSucceeded:=StrToVal(strSymbolValue,symbolValue);
-        IF boolConversionSucceeded=FALSE THEN
-            Logging\ERRORING,\LoggerName:="SocketModule",strSymbolValue;
-            Logging\ERRORING,\LoggerName:="SocketModule","WeaveData Conversion Failed: "+ValToStr(numCurIndex)+", "+ValToStr(numDataInLength);
-            ResponseError commandIn;
-            RETURN ;
-        ENDIF
-        SetDataVal strSymbolName\TaskName:=strDataTaskName,symbolValue;
-        commandOut:=commandIn+128;
-        ResponseSocketCommand commandOut;
-        Logging\DEBUG,\LoggerName:="SocketModule",stringHeader{commandIn+1}+" : "+strSymbolName+" : "+ValToStr(symbolValue);
-
-    ERROR
-        IF ERRNO=ERR_SYM_ACCESS OR ERRNO=ERR_INVDIM OR ERRNO=ERR_SYMBOL_TYPE OR ERRNO=ERR_TASKNAME THEN
-            Logging\ERRORING,\LoggerName:="SocketModule","Symbol ("+strSymbolName+") of WeaveData is not exist";
-            ResponseError commandIn;
-            RETURN ;
-        ENDIF
-    ENDPROC
-
     PROC DecodeDataFile(byte commandIn)
         VAR byte commandOut;
         UnpackRawBytes raw_data_in\Network,4,strDataFileName\ASCII:=numDataInLength;
-        DecodeSugarFigureDataFile;
-        commandOut:=commandIn+128;
-        ResponseSocketCommand commandOut;
+        IF FileSize("Data/"+strDataFileName)=0 THEN
+            Logging\ERRORING,\LoggerName:=TAG,"sugar figure file "+ValToStr(strDataFileName)+" is empty";
+            ResponseError commandIn;
+        ELSE
+            DecodeSugarFigureDataFile;
+            commandOut:=commandIn+128;
+            ResponseSocketCommand commandOut;
+        ENDIF
     ENDPROC
 
     PROC DecodeSugarFigureDataFile()
@@ -749,7 +529,7 @@ MODULE SocketModule
         VAR num numRawBytesIndex;
         VAR num numReadRawBytesCount;
         VAR num numRawBytesLength;
-        VAR num numGType;
+        VAR num numProcessType;
         VAR num numX;
         VAR num numY;
         VAR num numZ;
@@ -768,11 +548,11 @@ MODULE SocketModule
             numRawBytesLength:=RawBytesLen(raw_data_temp);
             numRawBytesIndex:=1;
             WHILE numRawBytesIndex<=numRawBytesLength DO
-                UnpackRawBytes raw_data_temp\Network,numRawBytesIndex,numGType\IntX:=DINT;
+                UnpackRawBytes raw_data_temp\Network,numRawBytesIndex,numProcessType\IntX:=DINT;
                 UnpackRawBytes raw_data_temp\Network,numRawBytesIndex+4,numX\Float4;
                 UnpackRawBytes raw_data_temp\Network,numRawBytesIndex+8,numY\Float4;
                 UnpackRawBytes raw_data_temp\Network,numRawBytesIndex+12,numZ\Float4;
-                Write iodevDecodeDataFile,ValToStr(numGType)+"\09"+ValToStr(Round(numX\Dec:=1))+"\09"+ValToStr(Round(numY\Dec:=1))+"\09"+ValToStr(Round(numZ\Dec:=1));
+                Write iodevDecodeDataFile,ValToStr(numProcessType)+"\09"+ValToStr(Round(numX\Dec:=1))+"\09"+ValToStr(Round(numY\Dec:=1))+"\09"+ValToStr(Round(numZ\Dec:=1));
                 numRawBytesIndex:=numRawBytesIndex+16;
             ENDWHILE
         ENDFOR

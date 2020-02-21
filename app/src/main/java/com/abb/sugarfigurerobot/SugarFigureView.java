@@ -33,18 +33,21 @@ public class SugarFigureView extends View {
     private Paint paintCompressed;
     private Bitmap bitmap;
 
-    private int figureWidth = 640;
-    private int figureHeight = 960;
+    //Real max size of sugar figure, used for getting the scale value, the unit is mm
+    private int figureWidth = 300;
+    private int figureHeight = 200;
     private int strokeWidth = 5;
     private float start_x;
     private float start_y;
     private float end_x;
     private float end_y;
 
-    private float figureScaleX = 250.0f / 640;
-    private float figureScaleY = 375.0f / 960;
-    private float figureOffsetX =-250;
-    private float figureOffsetY = -250;
+//The pixel x+ is the figure y+
+    //The pixel y+ is the figure x+
+    private float figureScaleXtoPixelY = figureHeight / 480.0f;
+    private float figureScaleYtoPixelX= figureWidth / 720.0f;
+    private float figureOffsetX = -150;
+    private float figureOffsetY = -200;
 
     private ArrayList<SugarFigurePath> listSugarFigurePath = new ArrayList<SugarFigurePath>();
     private SugarFigurePath sugarFigurePathCur;
@@ -104,18 +107,18 @@ public class SugarFigureView extends View {
                 sugarFigurePath.CompressLayerPath();
                 ArrayList<? extends Point> listGPath = sugarFigurePath.getListGPathCompressed();
                 compressedPathDOS.writeInt(GType.ProcessLStart.getCode());
-                compressedPathDOS.writeFloat((float) listGPath.get(0).x * figureScaleX+figureOffsetX);
-                compressedPathDOS.writeFloat((float) listGPath.get(0).y * figureScaleY+figureOffsetY);
+                compressedPathDOS.writeFloat((float) listGPath.get(0).y * figureScaleXtoPixelY + figureOffsetX);
+                compressedPathDOS.writeFloat((float) listGPath.get(0).x * figureScaleYtoPixelX + figureOffsetY);
                 compressedPathDOS.writeFloat(0);
                 for (int i = 1; i < listGPath.size() - 1; i++) {
                     compressedPathDOS.writeInt(GType.ProcessL.getCode());
-                    compressedPathDOS.writeFloat((float) listGPath.get(i).x * figureScaleX+figureOffsetX);
-                    compressedPathDOS.writeFloat((float) listGPath.get(i).y * figureScaleY+figureOffsetY);
+                    compressedPathDOS.writeFloat((float) listGPath.get(i).y * figureScaleXtoPixelY + figureOffsetX);
+                    compressedPathDOS.writeFloat((float) listGPath.get(i).x * figureScaleYtoPixelX + figureOffsetY);
                     compressedPathDOS.writeFloat(0);
                 }
                 compressedPathDOS.writeInt(GType.ProcessLEnd.getCode());
-                compressedPathDOS.writeFloat((float) listGPath.get(listGPath.size() - 1).x * figureScaleX+figureOffsetX);
-                compressedPathDOS.writeFloat((float) listGPath.get(listGPath.size() - 1).y * figureScaleY+figureOffsetY);
+                compressedPathDOS.writeFloat((float) listGPath.get(listGPath.size() - 1).y * figureScaleXtoPixelY + figureOffsetX);
+                compressedPathDOS.writeFloat((float) listGPath.get(listGPath.size() - 1).x * figureScaleYtoPixelX + figureOffsetY);
                 compressedPathDOS.writeFloat(0);
                 pointCount += sugarFigurePath.getListGPath().size();
                 pointCompressedCount += sugarFigurePath.getListGPathCompressed().size();
@@ -173,8 +176,8 @@ public class SugarFigureView extends View {
         // 设置wrap_content的默认宽 / 高值
         // 默认宽/高的设定并无固定依据,根据需要灵活设置
         // 类似TextView,ImageView等针对wrap_content均在onMeasure()对设置默认宽 / 高值有特殊处理,具体读者可以自行查看
-        int mWidth = figureWidth;
-        int mHeight = figureHeight;
+        int mWidth = 300;
+        int mHeight = 200;
 
         // 当布局参数设置为wrap_content时，设置默认值
         if (getLayoutParams().width == ViewGroup.LayoutParams.WRAP_CONTENT && getLayoutParams().height == ViewGroup.LayoutParams.WRAP_CONTENT) {
